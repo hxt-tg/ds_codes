@@ -11,7 +11,7 @@ bool checkExp(std::string src) {
     int chk_X = 0, chk_dot = 0, chk_up = 0;
     for (auto p = src.begin(); p < src.end(); p++) {
         /* Check invalid character */
-        if (VALID_CHARS.find(*p) > VALID_CHARS.length()-1) err("Invalid char '" + std::to_string(*p) + "'.");
+        if (VALID_CHARS.find(*p) > VALID_CHARS.length()-1) err("Invalid char '" + std::string(1, *p) + "'.");
 
         /* Definite error condition */
         if (*p == '-' || *p == '+') {
