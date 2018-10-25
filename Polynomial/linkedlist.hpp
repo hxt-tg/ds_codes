@@ -46,6 +46,10 @@ public:
     }
 
     ~LinkedList() {
+        clear();
+    }
+
+    void clear() {
         LinkedNode<T> *p = _head.next;
         for (unsigned int i = 0; i < length; i++) {
             p = p->next;

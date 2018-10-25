@@ -1,17 +1,17 @@
 #include "exp.h"
 #include <string>
+#include <cmath>
 #include <sstream>
 
-const std::string VALID_CHARS = "0123456789.x^+-";
+const std::string VALID_CHARS = "0123456789.Xx^+-";
 
 bool checkExp(std::string src) {
     if (src.length() == 0) err("Empty expression.");
     enum { NUM_MODE, OP_MODE } chk_mode = OP_MODE; /* check_mode */
-    int num_len = 0; /* check number overflow */
     int chk_X = 0, chk_dot = 0, chk_up = 0;
     for (auto p = src.begin(); p < src.end(); p++) {
         /* Check invalid character */
-        if (VALID_CHARS.find(*p) < 0) err("Invalid char '" + std::to_string(*p) + "'.");
+        if (VALID_CHARS.find(*p) > VALID_CHARS.length()-1) err("Invalid char '" + std::to_string(*p) + "'.");
 
         /* Definite error condition */
         if (*p == '-' || *p == '+') {
@@ -37,7 +37,7 @@ bool checkExp(std::string src) {
             }
             if (*p == '^')
                 chk_up++;
-            // Record first 'X' position to process <Excepted operator>	
+            // Record first 'X' position to process <Excepted operator>
             if (*p == 'x' || *p == 'X') {
                 if (p < src.end()-1 && (p[1] >= '0' && p[1] <= '9')) {
                     err("Expected symbol '^'.");
@@ -69,15 +69,15 @@ std::string preProcess(std::string src) {
     if (src[src.size() - 1] == 'X') dest += '1';
     src = dest;
     dest = "";
-    if (src[0] == 'X') dest += '1'; 
+    if (src[0] == 'X') dest += '1';
     if (src[0] == '-') dest += '0';
     for (auto p = src.begin(); p < src.end(); p++) {
-        if (*p == '^') continue; 
+        if (*p == '^') continue;
         dest += *p;
         /* "<op>X" -> "<op>1X" */
         if ((*p == '+' || *p == '-') && p[1] == 'X')
             dest += '1';
-        if (*p == 'X' && (p[1] == '-' || p[1] == '+')) 
+        if (*p == 'X' && (p[1] == '-' || p[1] == '+'))
             dest += '1';
     }
     return dest;
@@ -89,9 +89,9 @@ ExpData parseTerm(std::string term) {
         sgn = term[0];
         term = term.substr(1);
     }
-    int xpos = term.find('X');
+    size_t xpos = term.find('X');
     ExpData data = { 0, 0 };
-    if (xpos < 0) data._coef = std::stof(term);
+    if (xpos > term.length()-1) data._coef = std::stof(term);
     else {
         data._coef = std::stof(term.substr(0, xpos));
         data._expn = std::stoi(term.substr(xpos + 1));
@@ -104,7 +104,7 @@ ExpData parseTerm(std::string term) {
 /* Expression methods */
 Expression::Expression() : LinkedList<ExpData>() {}
 
-Expression::Expression(std::string src) 
+Expression::Expression(std::string src)
     : LinkedList<ExpData>() {
     if (!checkExp(src)) return ;
     src = preProcess(src);
@@ -218,7 +218,7 @@ Expression Expression::devirate() {
 double Expression::evaluate(double val) {
     double ans = 0;
     LinkedNode<ExpData> *tp = head()->next;
-    for (unsigned int i = 0; i < size(); i++, tp = tp->next) 
+    for (unsigned int i = 0; i < size(); i++, tp = tp->next)
         ans += std::pow(val, tp->data._expn) * tp->data._coef;
     return ans;
 }
@@ -305,7 +305,7 @@ Expression &Expression::operator-=(Expression &exp) {
 
 Expression &Expression::operator*=(Expression &exp) {
     Expression e(*this);
-    LinkedList<ExpData>::~LinkedList();
+    clear();
     LinkedNode<ExpData> *ta = e.head()->next, *tb = exp.head()->next;
     ExpData d;
     for (unsigned int i = 0; i < e.size(); i++, ta = ta->next) {
@@ -332,7 +332,7 @@ Expression &Expression::operator-=(ExpData &data) {
 
 Expression &Expression::operator*=(ExpData &data) {
     Expression exp(*this);
-    LinkedList<ExpData>::~LinkedList();
+    clear();
     ExpData d;
     LinkedNode<ExpData> *tp = exp.head()->next;
     for (unsigned int i = 0; i < exp.size(); i++, tp = tp->next) {
@@ -369,7 +369,7 @@ Expression &Expression::operator-=(double val) {
 
 Expression &Expression::operator*=(double val) {
     if (std::fabs(val) < 1e-7) {
-        LinkedList<ExpData>::~LinkedList();
+        clear();
         return *this;
     }
     LinkedNode<ExpData> *tp = head()->next;
