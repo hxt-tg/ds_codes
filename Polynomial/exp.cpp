@@ -202,7 +202,7 @@ std::ostream &operator<<(std::ostream &out, const Expression &exp) {
     return out;
 }
 
-Expression Expression::devirate() {
+Expression Expression::devirate() const {
     Expression exp;
     ExpData data;
     LinkedNode<ExpData> *tp = head()->next;
@@ -215,95 +215,95 @@ Expression Expression::devirate() {
     return exp;
 }
 
-double Expression::evaluate(double val) {
+double Expression::evaluate(double val) const {
     double ans = 0;
     LinkedNode<ExpData> *tp = head()->next;
-    for (unsigned int i = 0; i < size(); i++, tp = tp->next)
+    for (unsigned int i = 0; i < size(); i++, tp = tp->next) 
         ans += std::pow(val, tp->data._expn) * tp->data._coef;
     return ans;
 }
 
-Expression Expression::operator+(Expression &exp) {
+Expression Expression::operator+(const Expression &exp) const {
     Expression ans(*this);
     ans += exp;
     return ans;
 }
 
-Expression Expression::operator-(Expression &exp) {
+Expression Expression::operator-(const Expression &exp) const {
     Expression ans(*this);
     ans -= exp;
     return ans;
 }
 
-Expression Expression::operator*(Expression &exp) {
+Expression Expression::operator*(const Expression &exp) const {
     Expression ans(*this);
     ans *= exp;
     return ans;
 }
 
-Expression Expression::operator+(ExpData &data) {
+Expression Expression::operator+(const ExpData &data) const {
     Expression ans(*this);
     ans += data;
     return ans;
 }
 
-Expression Expression::operator-(ExpData &data) {
+Expression Expression::operator-(const ExpData &data) const {
     Expression ans(*this);
     ans -= data;
     return ans;
 }
 
-Expression Expression::operator*(ExpData &data) {
+Expression Expression::operator*(const ExpData &data) const {
     Expression ans(*this);
     ans *= data;
     return ans;
 }
 
-Expression Expression::operator/(ExpData &data) {
+Expression Expression::operator/(const ExpData &data) const {
     Expression ans(*this);
     ans /= data;
     return ans;
 }
 
-Expression Expression::operator+(double val) {
+Expression Expression::operator+(double val) const {
     Expression ans(*this);
     ans += val;
     return ans;
 }
 
-Expression Expression::operator-(double val) {
+Expression Expression::operator-(double val) const {
     Expression ans(*this);
     ans -= val;
     return ans;
 }
 
-Expression Expression::operator*(double val) {
+Expression Expression::operator*(double val) const {
     Expression ans(*this);
     ans *= val;
     return ans;
 }
 
-Expression Expression::operator/(double val) {
+Expression Expression::operator/(double val) const {
     Expression ans(*this);
     ans /= val;
     return ans;
 }
 
-Expression &Expression::operator+=(Expression &exp) {
+Expression &Expression::operator+=(const Expression &exp) {
     LinkedNode<ExpData> *tp = exp.head()->next;
     for (unsigned int i = 0; i < exp.size(); i++, tp = tp->next)
         *this += tp->data;
     return *this;
 }
 
-Expression &Expression::operator-=(Expression &exp) {
+Expression &Expression::operator-=(const Expression &exp) {
     LinkedNode<ExpData> *tp = exp.head()->next;
     for (unsigned int i = 0; i < exp.size(); i++, tp = tp->next)
         *this -= tp->data;
     return *this;
 }
 
-Expression &Expression::operator*=(Expression &exp) {
+Expression &Expression::operator*=(const Expression &exp) {
     Expression e(*this);
     clear();
     LinkedNode<ExpData> *ta = e.head()->next, *tb = exp.head()->next;
@@ -319,18 +319,18 @@ Expression &Expression::operator*=(Expression &exp) {
     return *this;
 }
 
-Expression &Expression::operator+=(ExpData &data) {
+Expression &Expression::operator+=(const ExpData &data) {
     this->insert(data);
     return *this;
 }
 
-Expression &Expression::operator-=(ExpData &data) {
+Expression &Expression::operator-=(const ExpData &data) {
     ExpData d = { data._coef*-1, data._expn };
     this->insert(d);
     return *this;
 }
 
-Expression &Expression::operator*=(ExpData &data) {
+Expression &Expression::operator*=(const ExpData &data) {
     Expression exp(*this);
     clear();
     ExpData d;
@@ -343,7 +343,7 @@ Expression &Expression::operator*=(ExpData &data) {
     return *this;
 }
 
-Expression &Expression::operator/=(ExpData &data) {
+Expression &Expression::operator/=(const ExpData &data) {
     if (std::fabs(data._coef) < 1e-7) err("Cannot divide by 0.");
     LinkedNode<ExpData> *tp = head()->next;
     for (unsigned int i = 0; i < size(); i++, tp = tp->next) {
@@ -385,3 +385,4 @@ Expression &Expression::operator/=(double val) {
         tp->data._coef /= val;
     return *this;
 }
+
