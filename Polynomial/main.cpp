@@ -1,6 +1,4 @@
 #define DEBUG
-#define _GLIBCXX_USE_C99 1
-
 
 #include "exp.h"
 #include <iostream>
@@ -25,7 +23,7 @@ void linked_list_test() {
 }
 
 void exp_test() {
-    Expression a("2-5X^2"), b("3+3X");
+    Expression a("2+5X^2"), b("3+3X");
     ExpData d = { -2, 1 };
     cout << (a/d).toDblLine("Out[1]: ", true) << endl;
     cout << (a/d).devirate().toDblLine("Out[2]: ", true) << endl;
@@ -33,7 +31,6 @@ void exp_test() {
 
 int main() {
     exp_test();
-
     pause();
     return 0;
 }

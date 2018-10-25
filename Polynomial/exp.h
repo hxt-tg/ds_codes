@@ -4,6 +4,9 @@
 #include "linkedlist.hpp"
 #include <iostream>
 
+const std::string VALID_CHARS = "0123456789.xX^+-";
+
+
 typedef struct ExpData{
     double _coef;
     int    _expn;
@@ -14,7 +17,7 @@ class Expression : public LinkedList<ExpData> {
 public:
     Expression();
     explicit Expression(std::string src);
-    void insert(ExpData &data);
+    void insert(const ExpData &data);
     std::string toPlainString(bool space=true, bool caret=false) const;
     std::string toDblLine(const std::string &info="", bool newline = false, bool space=true) const;
     Expression devirate() const;

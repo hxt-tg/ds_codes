@@ -3,11 +3,10 @@
 #include <cmath>
 #include <sstream>
 
-const std::string VALID_CHARS = "0123456789.Xx^+-";
-
 bool checkExp(std::string src) {
     if (src.length() == 0) err("Empty expression.");
     enum { NUM_MODE, OP_MODE } chk_mode = OP_MODE; /* check_mode */
+    int num_len = 0; /* check number overflow */
     int chk_X = 0, chk_dot = 0, chk_up = 0;
     for (auto p = src.begin(); p < src.end(); p++) {
         /* Check invalid character */
@@ -69,15 +68,15 @@ std::string preProcess(std::string src) {
     if (src[src.size() - 1] == 'X') dest += '1';
     src = dest;
     dest = "";
-    if (src[0] == 'X') dest += '1';
+    if (src[0] == 'X') dest += '1'; 
     if (src[0] == '-') dest += '0';
     for (auto p = src.begin(); p < src.end(); p++) {
-        if (*p == '^') continue;
+        if (*p == '^') continue; 
         dest += *p;
         /* "<op>X" -> "<op>1X" */
         if ((*p == '+' || *p == '-') && p[1] == 'X')
             dest += '1';
-        if (*p == 'X' && (p[1] == '-' || p[1] == '+'))
+        if (*p == 'X' && (p[1] == '-' || p[1] == '+')) 
             dest += '1';
     }
     return dest;
@@ -104,7 +103,7 @@ ExpData parseTerm(std::string term) {
 /* Expression methods */
 Expression::Expression() : LinkedList<ExpData>() {}
 
-Expression::Expression(std::string src)
+Expression::Expression(std::string src) 
     : LinkedList<ExpData>() {
     if (!checkExp(src)) return ;
     src = preProcess(src);
@@ -121,7 +120,7 @@ Expression::Expression(std::string src)
     }
 }
 
-void Expression::insert(ExpData &data) {
+void Expression::insert(const ExpData &data) {
     unsigned int i = 0;
     LinkedNode<ExpData> *tp = head()->next;
     while (i<size() && tp->data._expn > data._expn) {
@@ -385,4 +384,3 @@ Expression &Expression::operator/=(double val) {
         tp->data._coef /= val;
     return *this;
 }
-

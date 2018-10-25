@@ -61,7 +61,7 @@ public:
     }
 
     /* Insert item **before** pos. (If index >= length then append to the end.) */
-    void insert(T &data, unsigned int index) {
+    void insert(const T &data, unsigned int index) {
         LinkedNode<T> *hp = &_head;
         for (int i = 0; i < (int)MIN(index, length); i++)
             hp = hp->next;
