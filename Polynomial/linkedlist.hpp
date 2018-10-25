@@ -83,7 +83,7 @@ public:
     }
 
     LinkedList<T> &operator=(LinkedList<T> list) {
-        LinkedList<T>::~LinkedList();
+        clear();
         LinkedNode<T> *tp = list.head()->next;
         for (unsigned int i = 0; i < list.size(); i++, tp = tp->next)
             LinkedList<T>::insert(tp->data, i + 1);
