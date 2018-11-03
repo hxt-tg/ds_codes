@@ -71,6 +71,15 @@ Matrix subMatrix(const Matrix m, int start_row, int start_col, int h, int w) {
     return res;
 }
 
+Matrix transposeMatrix(const Matrix m) {
+    Matrix res = createMatrix(m->w, m->h);
+    int i, j;
+    for (i = 0; i < m->h; i++)
+        for (j = 0; j < m->w; j++)
+            res->d[j][i] = m->d[i][j];
+    return res;
+}
+
 void deleteMatrix(Matrix m) {
     if (!m) return ;
     int i;
@@ -92,7 +101,7 @@ void printMatrix(const Matrix m) {
     int i, j;
     for (i = 0; i < m->h; i++) {
         for (j = 0; j < m->w; j++)
-            printf("%10.4g", _isZero(m->d[i][j]) ? 0 : m->d[i][j]);
+            printf("%10.4g", _toZero(m->d[i][j]));
         putchar('\n');
     }
 }
@@ -135,8 +144,8 @@ int isZeroRow(const Matrix m, int row) {
     int i;
     for (i = 0; i < m->w; i++)
         if (!_isZero(m->d[row][i]))
-            return 1;
-    return 0;
+            return 0;
+    return 1;
 }
 
 int rowRankMatrix(const Matrix m) {
@@ -145,7 +154,7 @@ int rowRankMatrix(const Matrix m) {
     Matrix mat = is_echelon ? m : toRowEchelonMatrixNew(m);
     int rank = m->h;
     for (; rank > 0; rank--)
-        if (isZeroRow(mat, rank-1)) break;
+        if (!isZeroRow(mat, rank-1)) break;
     if (!is_echelon) deleteMatrix(mat);
     return rank;
 }

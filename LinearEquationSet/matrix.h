@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #define _isZero(x)   (fabs(x) < 1e-7)
+#define _toZero(x)   (_isZero(x) ? 0 : (x))
 #define _equal(x, y) (fabs((x)-(y)) < 1e-7)
 
 typedef struct SMatrix {
@@ -20,6 +21,7 @@ Matrix readMatrix(FILE *fp);
 Matrix concatColumnMatrix(const Matrix m1, const Matrix m2);
 Matrix concatRowMatrix(const Matrix m1, const Matrix m2);
 Matrix subMatrix(const Matrix m, int start_row, int start_col, int h, int w);
+Matrix transposeMatrix(const Matrix m);
 void   deleteMatrix(Matrix m);
 
 // Matrix Operation

@@ -30,7 +30,12 @@ void setEqVars(EqSet eq, NameTag *vars) {
 
 EqSet copyEqSet(const EqSet eq) {
     if (!_isValidEqSet(eq)) return NULL;
-    return createEqSet(eq->param, eq->coef);
+    EqSet res = createEqSet(eq->param, eq->coef);
+    if (eq->vars) {
+        res->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
+        memcpy(res->vars, eq->vars, eq->param->w * sizeof(NameTag));
+    }
+    return res;
 }
 
 EqSet readEqSet(FILE *fp) {
@@ -60,6 +65,7 @@ EqSet concatEqSet(const EqSet eq1, const EqSet eq2) {
 }
 
 void deleteEqSet(EqSet eq) {
+    if (!eq) return ;
     if (eq->vars) free(eq->vars);
     deleteMatrix(eq->param);
     deleteMatrix(eq->coef);
@@ -73,7 +79,7 @@ void deleteEqSet(EqSet eq) {
 // EqSet Operation
 void printEqSet(const EqSet eq) {
     if (!_isValidEqSet(eq)) return ;
-    int chr_p = (10 * eq->param->w - 5)/2 + 5, chr_dash = 8 + 10 * (eq->param->w+1), i, j;
+    int chr_p = (10 * eq->param->w - 6)/2 + 6, chr_dash = 8 + 10 * (eq->param->w+1), i, j;
     for (i = 0; i < chr_dash; i++) putchar('-'); putchar('\n');
     printf("  Eq  |%*s%-*s| %6s   \n", chr_p, "Params", 10*eq->param->w-chr_p, "", "Coef");
     if (eq->vars) {
@@ -86,9 +92,9 @@ void printEqSet(const EqSet eq) {
     for (i = 0; i < eq->coef->h; i++) {
         printf("Eq.%.2d |", i+1);
         for (j = 0; j < eq->param->w; j++)
-            printf("%10.5g", eq->param->d[i][j]);
+            printf("%10.4g", _toZero(eq->param->d[i][j]));
         putchar('|');
-        printf("%10.5g", eq->coef->d[i][0]);
+        printf("%10.4g", _toZero(eq->coef->d[i][0]));
         putchar('\n');
     }
     for (i = 0; i < chr_dash; i++) putchar('-'); putchar('\n');
@@ -202,9 +208,206 @@ EqSet toReducedRowEchelonEqSetNew(const EqSet eq) {
 
 
 
-Matrix solveEqSet(const EqSet eq) {
-    if (!_isValidEqSet(eq)) return NULL;
-    printEqSet(eq);
-    /* toReducedRowEchelonEqSet(eq); */
-    return eq->coef;
+int _hasSolution(const EqSet solved_eq) {
+    if (!_isValidEqSet(solved_eq)) return 0;
+    int i;
+    const EqSet eq = solved_eq;
+    for (i = eq->param->h-1; i >= 0; i--)
+        if (isZeroRow(eq->param, i) && !_isZero(eq->coef->d[i][0]))
+            return 0;
+    return 1;
 }
+
+EqSol solveEqSet(const EqSet eq_set) {
+    if (!_isValidEqSet(eq_set)) return NULL;
+    EqSet eq = copyEqSet(eq_set);
+    toReducedRowEchelonEqSet(eq);
+    if (!_hasSolution(eq)) {
+        deleteEqSet(eq);
+        return NULL;
+    }
+    int eqRank = rowRankEqSet(eq), ih=0, iw=0, j, n_free=0;
+    EqSol s = (EqSol) malloc (sizeof(struct SEqSol));
+    s->n_free = eq->param->w - eqRank;
+    if (eq->vars) {
+        s->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
+        memcpy(s->vars, eq->vars, eq->param->w * sizeof(NameTag));
+    } else s->vars = NULL;
+    if (s->n_free) s->free_vars = (int *) malloc (sizeof(int) * s->n_free);
+    else s->free_vars = NULL;
+    Matrix vars_sol = createMatrix(eqRank, s->n_free);
+    while (ih < eq->param->h && iw < eq->param->w) {
+        if (_isZero(eq->param->d[ih][iw])) {
+            if (!s->n_free) printf("BUG!!!\n");
+            s->free_vars[n_free] = iw;
+            for (j = 0; j < eq->param->h; j++)
+                vars_sol->d[j][n_free] = -eq->param->d[j][iw];
+            n_free++;
+            iw++;
+            continue;
+        }
+        iw++;
+        ih++;
+    }
+    while (iw < eq->param->w) {
+        s->free_vars[n_free] = iw;
+        for (j = 0; j < eq->param->h; j++)
+            vars_sol->d[j][n_free] = -eq->param->d[j][iw];
+        n_free++;
+        iw++;
+    }
+    Matrix sub_coef = subMatrix(eq->coef, 0, 0, eqRank, 1);
+    s->sol = concatColumnMatrix(sub_coef, vars_sol);
+    deleteMatrix(sub_coef);
+    deleteMatrix(vars_sol);
+    deleteEqSet(eq);
+    return s;
+}
+
+#define BUFSIZE 32
+typedef char BufItem[BUFSIZE];
+
+int _prePrintArr(BufItem *dest, const double *val, int n_val) {
+    int i, len, max_len = 0, max_i = 0;
+    for (i = 0; i < n_val; i++) {
+        len = sprintf(dest[i], "%.4g", _toZero(val[i]));
+        if (len > max_len) {
+            max_len = len;
+            max_i   = i;
+        }
+    }
+    return max_len;
+}
+
+void printEqSol(const EqSol s, int mode) {
+    if (!s) {
+        printf("*No solution*\n");
+        return ;
+    }
+    int n_vars = s->sol->h, n_free = s->n_free, i, j, k;
+    int *fidx = (int *) malloc (sizeof(int) * (n_vars + n_free));  // -1 for free, >=0 for not free.
+    if (!n_free)
+        for (i = 0; i < n_vars + n_free; i++)
+            fidx[i] = i;
+    else
+        for (i = j = k = 0; i < n_vars + n_free; i++)
+            if (j < n_vars && i == s->free_vars[j]) {
+                fidx[i] = -1;
+                j++;
+            } else fidx[i] = k++;
+
+    NameTag *strv;
+    if (!s->vars) {
+        strv = (NameTag *) calloc (n_vars + n_free, sizeof(NameTag));
+        for (i = 0; i < n_vars + n_free; i++)
+            sprintf(strv[i], "X_{%.2d}", i);
+    } else strv = s->vars;
+    NameTag *strf;
+    if (!n_free) strf = NULL;
+    else {
+        strf = (NameTag *) calloc (n_free, sizeof(NameTag));
+        if (n_free == 1) sprintf(strf[0], "C");
+        else for (i = 0; i < n_free; i++)
+            sprintf(strf[i], i > 9 ? "C_{%d}" : "C_%d", i);
+    }
+
+    switch (mode) {
+        case 1:
+            for (i = 0; i < n_vars + n_free; i++) {
+                if (fidx[i] == -1) {
+                    for (j = 0; j < n_free; j++)
+                        if (s->free_vars[j] == i) break;
+                    printf("%*s = %s\n", NAMETAG_LEN, strv[i], strf[j]);
+                    continue;
+                }
+                printf("%*s = ", NAMETAG_LEN, strv[i]);
+                printf("%.4g", _toZero(s->sol->d[fidx[i]][0]));
+                for (j = 0; j < n_free; j++) {
+                    if (_isZero(s->sol->d[fidx[i]][j+1])) continue;
+                    if (_equal(s->sol->d[fidx[i]][j+1], -1)) putchar('-');
+                    else if (_equal(s->sol->d[fidx[i]][j+1], 1)) {}
+                    else printf("%+.4g*", _toZero(s->sol->d[fidx[i]][j+1]));
+                    printf("%s", strf[j]);
+                }
+                putchar('\n');
+            }
+            break;
+        case 2:
+            {
+                printf(" Free variables: ");
+                for (i = 0; i < n_free; i++)
+                    printf("%s = %s  ", strv[s->free_vars[i]], strf[i]);
+                putchar('\n');
+                Matrix trs = transposeMatrix(s->sol); // Transposed solution
+                printMatrix(trs);
+                BufItem buf[s->sol->h];
+                int strv_maxlen = 0, main_row, strf_lens[n_free], first_row, last_row;
+                for (i = 0; i < n_free + n_vars; i++) {
+                    if (fidx[i] == -1) continue;
+                    int len = strlen(strv[i]);
+                    if (len > strv_maxlen) strv_maxlen = len;
+                }
+                // Get row info
+                for (last_row = n_vars+n_free-1; last_row>0 && fidx[last_row]==-1; last_row--);
+                for (first_row = 0; first_row < n_vars+n_free && fidx[first_row]==-1; first_row++)
+                for (main_row = first_row, k=0; main_row < last_row && k < n_vars/2; main_row++) {
+                    if (fidx[main_row] == -1) continue;
+                    k++;
+                }
+                for (i = 0; i < n_free; i++)
+                    strf_lens[i] = strlen(strf[i]);
+                int nmaxs[s->n_free + 1]; // Number of max num length.
+                for (i = 0; i < s->n_free+1; i++)
+                    nmaxs[i] = _prePrintArr(buf, trs->d[i], s->sol->h);
+
+                for (i = 0; i < n_vars + n_free; i++) {
+                    if (fidx[i] == -1) continue;
+                    const char *st = (i == first_row ? "┌" : (i == last_row ? "└" : "│")),
+                               *et = (i == first_row ? "┐" : (i == last_row ? "┘" : "│"));
+
+                    printf("%s %*s %s %c ", st, strv_maxlen, strv[i], et, i == main_row ? '=' : ' ');
+                    printf("%s %*.4g %s", st, nmaxs[0], _toZero(s->sol->d[fidx[i]][0]), et);
+                    for (j = 0; j < n_free; j++) {
+                        /* printf("\n%d : %d : isZero: %s\n", j, j+1, isZeroRow(trs, j+1) ? "True" : "False"); */
+                        if (isZeroRow(trs, j+1)) continue;
+                        printf(" %c %s %*.4g %s%*s", (i == main_row ? '+' : ' '), st, nmaxs[j+1],
+                                                     _toZero(s->sol->d[fidx[i]][j+1]), et,
+                                                     strf_lens[j], (i == main_row ? strf[j] : ""));
+                    }
+
+                    putchar('\n');
+                }
+                deleteMatrix(trs);
+            }
+
+            // ┌ X1 ┐
+            // │ X2 │
+            // └ X3 ┘
+
+            break;
+        default:
+            printf(" Free variables: ");
+            for (i = 0; i < n_free; i++)
+                printf("%s = %s  ", strv[s->free_vars[i]], strf[i]);
+            printf("\nOther variables: ");
+            for (i = 0; i < n_vars + n_free; i++) {
+                if (fidx[i] == -1) continue;
+                printf("%s  ", strv[i]);
+            }
+            printf("\nSolution matrix: (Coef & free vars)\n");
+            printMatrix(s->sol);
+    }
+
+    free(fidx);
+    if (!s->vars) free(strv);
+    if (n_free) free(strf);
+}
+
+void deleteEqSol(EqSol sol) {
+    if (!sol) return ;
+    if (sol->vars) free(sol->vars);
+    if (sol->free_vars) free(sol->free_vars);
+    deleteMatrix(sol->sol);
+    free(sol);
+}
+

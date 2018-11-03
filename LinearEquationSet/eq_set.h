@@ -14,6 +14,13 @@ typedef struct SEqSet {
     NameTag *vars;
 } *EqSet;
 
+typedef struct SEqSol {
+    Matrix sol;
+    NameTag *vars;
+    int n_free;        /* Free variables number */
+    int *free_vars;
+} *EqSol;
+
 
 // EqSet Construction
 EqSet createEqSet(const Matrix param, const Matrix coef);
@@ -42,7 +49,9 @@ EqSet toRowEchelonEqSetNew(const EqSet eq);
 EqSet toReducedRowEchelonEqSetNew(const EqSet eq);
 
 // Equation Set Solve
-EqSet  solveEquSet(const EqSet eq);
+EqSol solveEqSet(const EqSet eq);
+void  printEqSol(const EqSol sol, int mode); // 1 for row and 2 for column
+void  deleteEqSol(EqSol sol);
 
 #endif /* ifndef EQ_SET_H */
 
