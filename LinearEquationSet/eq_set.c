@@ -10,31 +10,38 @@ int _isValidEqSet(EqSet eq) {
 // EqSet Construction
 EqSet createEqSet(const Matrix param, const Matrix coef) {
     if (!param || (coef && (coef->h != param->h || coef->w != 1))) return NULL;
+    int i;
     EqSet eq = (EqSet) malloc (sizeof(struct SEqSet));
     eq->coef = coef ? copyMatrix(coef) : createMatrix(param->h, 1);
     eq->param = copyMatrix(param);
-    eq->vars = NULL;
+    eq->vars = (NameTag *) calloc (param->w, sizeof(NameTag));
+    for (i = 0; i < eq->param->w; i++)
+        sprintf(eq->vars[i], "X%d", i+1);
     return eq;
 }
 
-void setEqVars(EqSet eq, NameTag *vars) {
+void setEqVars(EqSet eq, const NameTag *vars) {
     if (!_isValidEqSet(eq)) return ;
-    int i;
-    for (i = 0; vars[i][0]; i++) ;
-    if (i != eq->param->w) return ;
-    if (eq->vars) free(eq->vars);
-    eq->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
-    for (i = 0; vars[i][0]; i++)
-        strncpy(eq->vars[i], vars[i], NAMETAG_LEN);
+        int i;
+    if (!vars) {
+        free(eq->vars);
+        eq->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
+        for (i = 0; i < eq->param->w; i++)
+            sprintf(eq->vars[i], "X%d", i+1);
+    } else {
+        for (i = 0; vars[i][0]; i++) ;
+        if (i != eq->param->w) return ;
+        free(eq->vars);
+        eq->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
+        for (i = 0; vars[i][0]; i++)
+            strncpy(eq->vars[i], vars[i], NAMETAG_LEN);
+    }
 }
 
 EqSet copyEqSet(const EqSet eq) {
     if (!_isValidEqSet(eq)) return NULL;
     EqSet res = createEqSet(eq->param, eq->coef);
-    if (eq->vars) {
-        res->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
-        memcpy(res->vars, eq->vars, eq->param->w * sizeof(NameTag));
-    }
+    memcpy(res->vars, eq->vars, eq->param->w * sizeof(NameTag));
     return res;
 }
 
@@ -59,6 +66,7 @@ EqSet concatEqSet(const EqSet eq1, const EqSet eq2) {
     Matrix new_param = concatRowMatrix(eq1->param, eq2->param);
     Matrix new_coef  = concatRowMatrix(eq1->coef,  eq2->coef );
     EqSet eq = createEqSet(new_param, new_coef);
+    memcpy(eq->vars, eq1->vars, eq->param->w * sizeof(NameTag));
     deleteMatrix(new_param);
     deleteMatrix(new_coef);
     return eq;
@@ -66,7 +74,7 @@ EqSet concatEqSet(const EqSet eq1, const EqSet eq2) {
 
 void deleteEqSet(EqSet eq) {
     if (!eq) return ;
-    if (eq->vars) free(eq->vars);
+    free(eq->vars);
     deleteMatrix(eq->param);
     deleteMatrix(eq->coef);
     free(eq);
@@ -80,14 +88,14 @@ void deleteEqSet(EqSet eq) {
 void printEqSet(const EqSet eq) {
     if (!_isValidEqSet(eq)) return ;
     int chr_p = (10 * eq->param->w - 6)/2 + 6, chr_dash = 8 + 10 * (eq->param->w+1), i, j;
+    NameTag *strv = eq->vars;
     for (i = 0; i < chr_dash; i++) putchar('-'); putchar('\n');
     printf("  Eq  |%*s%-*s| %6s   \n", chr_p, "Params", 10*eq->param->w-chr_p, "", "Coef");
-    if (eq->vars) {
-        printf("      |");
-        for (i = 0; i < eq->param->w; i++)
-            printf("%10s", eq->vars[i]);
-        printf("|          \n");
-    }
+    // Print X_n
+    printf("      |");
+    for (i = 0; i < eq->param->w; i++)
+        printf("%10s", strv[i]);
+    printf("|          \n");
     for (i = 0; i < chr_dash; i++) putchar('-'); putchar('\n');
     for (i = 0; i < eq->coef->h; i++) {
         printf("Eq.%.2d |", i+1);
@@ -229,10 +237,8 @@ EqSol solveEqSet(const EqSet eq_set) {
     int eqRank = rowRankEqSet(eq), ih=0, iw=0, j, n_free=0;
     EqSol s = (EqSol) malloc (sizeof(struct SEqSol));
     s->n_free = eq->param->w - eqRank;
-    if (eq->vars) {
-        s->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
-        memcpy(s->vars, eq->vars, eq->param->w * sizeof(NameTag));
-    } else s->vars = NULL;
+    s->vars = (NameTag *) calloc (eq->param->w, sizeof(NameTag));
+    memcpy(s->vars, eq->vars, eq->param->w * sizeof(NameTag));
     if (s->n_free) s->free_vars = (int *) malloc (sizeof(int) * s->n_free);
     else s->free_vars = NULL;
     Matrix vars_sol = createMatrix(eqRank, s->n_free);
@@ -279,6 +285,29 @@ int _prePrintArr(BufItem *dest, const double *val, int n_val) {
     return max_len;
 }
 
+void printEqSetFunc(const EqSet eq) {
+    if (!_isValidEqSet(eq)) {
+        printf("*No equations*");
+        return ;
+    }
+    int i, j, isPrinted;
+    NameTag *strv = eq->vars;
+    for (i = 0; i < eq->param->h; i++) {
+        isPrinted = 0;
+        for (j = 0; j < eq->param->w; j++) {
+            if (_isZero(eq->param->d[i][j])) continue;
+            if (_equal(eq->param->d[i][j], 1) || _equal(eq->param->d[i][j], -1))
+                printf("%s", eq->param->d[i][j]>0? (isPrinted ? "+" : ""):"-");
+            else
+                printf(isPrinted ? "%.4g":"%+.4g", eq->param->d[i][j]);
+            isPrinted = 1;
+            printf("%s", strv[j]);
+        }
+        if (!isPrinted) printf("0");
+        printf("=%.4g\n", eq->coef->d[i][0]);
+    }
+}
+
 void printEqSol(const EqSol s, int mode) {
     if (!s) {
         printf("*No solution*\n");
@@ -296,19 +325,14 @@ void printEqSol(const EqSol s, int mode) {
                 j++;
             } else fidx[i] = k++;
 
-    NameTag *strv;
-    if (!s->vars) {
-        strv = (NameTag *) calloc (n_vars + n_free, sizeof(NameTag));
-        for (i = 0; i < n_vars + n_free; i++)
-            sprintf(strv[i], "X_{%.2d}", i);
-    } else strv = s->vars;
+    NameTag *strv = s->vars;
     NameTag *strf;
     if (!n_free) strf = NULL;
     else {
         strf = (NameTag *) calloc (n_free, sizeof(NameTag));
         if (n_free == 1) sprintf(strf[0], "C");
         else for (i = 0; i < n_free; i++)
-            sprintf(strf[i], i > 9 ? "C_{%d}" : "C_%d", i);
+            sprintf(strf[i], i > 9 ? "C%d" : "C%d", i);
     }
 
     switch (mode) {
@@ -339,7 +363,6 @@ void printEqSol(const EqSol s, int mode) {
                     printf("%s = %s  ", strv[s->free_vars[i]], strf[i]);
                 putchar('\n');
                 Matrix trs = transposeMatrix(s->sol); // Transposed solution
-                printMatrix(trs);
                 BufItem buf[s->sol->h];
                 int strv_maxlen = 0, main_row, strf_lens[n_free], first_row, last_row;
                 for (i = 0; i < n_free + n_vars; i++) {
@@ -399,13 +422,12 @@ void printEqSol(const EqSol s, int mode) {
     }
 
     free(fidx);
-    if (!s->vars) free(strv);
     if (n_free) free(strf);
 }
 
 void deleteEqSol(EqSol sol) {
     if (!sol) return ;
-    if (sol->vars) free(sol->vars);
+    free(sol->vars);
     if (sol->free_vars) free(sol->free_vars);
     deleteMatrix(sol->sol);
     free(sol);

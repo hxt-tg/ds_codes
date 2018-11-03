@@ -24,7 +24,7 @@ typedef struct SEqSol {
 
 // EqSet Construction
 EqSet createEqSet(const Matrix param, const Matrix coef);
-void setEqVars(EqSet eq, NameTag *vars);
+void setEqVars(EqSet eq, const NameTag *vars);
 EqSet copyEqSet(const EqSet eq);
 EqSet readEqSet(FILE *fp);
 EqSet concatEqSet(const EqSet eq1, const EqSet eq2);
@@ -50,6 +50,7 @@ EqSet toReducedRowEchelonEqSetNew(const EqSet eq);
 
 // Equation Set Solve
 EqSol solveEqSet(const EqSet eq);
+void  printEqSetFunc(const EqSet eq);
 void  printEqSol(const EqSol sol, int mode); // 1 for row and 2 for column
 void  deleteEqSol(EqSol sol);
 

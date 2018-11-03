@@ -28,13 +28,14 @@ EqSet sample2() {
     FILE *fp_eq_set = fopen("sample2.eqset", "r");
     EqSet eq = readEqSet(fp_eq_set);
     eq->param = concatColumnMatrix(createMatrix(eq->param->h, 2), eq->param);
+    setEqVars(eq, NULL);
     fclose(fp_eq_set);
     return eq;
 }
 
 void printSolution(EqSet eq) {
     printf("\nRaw equation:\n");
-    printEqSet(eq); putchar('\n');
+    printEqSetFunc(eq); putchar('\n');
 
     printf("Reduced equations set below:\n");
     EqSet reduced_eq_set = toReducedRowEchelonEqSetNew(eq);
@@ -43,7 +44,10 @@ void printSolution(EqSet eq) {
 
     EqSol s = solveEqSet(eq);
 
-    printf("Solution:\n");
+    printf("Solution: (Style 1)\n");
+    printEqSol(s, 1); putchar('\n');
+
+    printf("Solution: (Style 2)\n");
     printEqSol(s, 2); putchar('\n');
 
 
