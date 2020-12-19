@@ -27,7 +27,6 @@ EqSet sample1() {
 EqSet sample2() {
     FILE *fp_eq_set = fopen("sample2.eqset", "r");
     EqSet eq = readEqSet(fp_eq_set);
-    eq->param = concatColumnMatrix(createMatrix(eq->param->h, 2), eq->param);
     setEqVars(eq, NULL);
     fclose(fp_eq_set);
     return eq;
